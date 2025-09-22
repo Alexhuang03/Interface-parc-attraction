@@ -1,0 +1,227 @@
+@startuml
+title Diagramme de classes MVC - Application de réservation d'attractions (fusion modèle/métier)
+
+package vue {
+  class AttractionView {
+    +afficherToutesAttractions() : void
+    +afficherDetails(attraction:Attraction) : void
+  }
+
+  class ClientView {
+    +afficherFormulaireConnexion() : void
+    +afficherHistorique() : void
+  }
+
+  class ReservationView {
+    +afficherReservation() : void
+    +afficherConfirmation() : void
+  }
+
+  class PaiementView {
+    +afficherFormulairePaiement() : void
+    +afficherRecu() : void
+  }
+
+  class AdminView {
+    +afficherDashboard() : void
+    +afficherGestionAttractions() : void
+    +afficherStatistiques() : void
+  }
+}
+
+package controleur {
+  class RechercheController {
+    +rechercherAttractions(criteria: String) : List<Attraction>
+  }
+
+  class MiseAJourController {
+    +ajouterAttraction(a:Attraction): void
+    +modifierAttraction(a:Attraction): void
+    +supprimerAttraction(id: int): void
+  }
+
+  class ReportingController {
+    +genererStatistiques() : void
+  }
+}
+
+package dao {
+  class AttractionDAO {
+    +findAll() : List<Attraction>
+    +findById(id:int): Attraction
+  }
+
+  class ClientDAO {
+    +findClientById(id:int): Client
+    +save(Client): void
+  }
+
+  class ReservationDAO {
+    +createReservation(r:Reservation): void
+    +getReservationsByClient(id:int): List<Reservation>
+  }
+
+  class PaiementDAO {
+    +save(p:Paiement): void
+    +getPaiementById(id:int): Paiement
+  }
+}
+
+package modele {
+  class AttractionModele {
+    +getAttractionsDisponibles() : List<Attraction>
+    +calculerPopularite() : float
+  }
+
+  class ClientModele {
+    +connecter(id:String, mdp:String): Client
+    +inscrire(Client): void
+  }
+
+  class ReservationModele {
+    +reserverAttraction(clientId:int, attractionId:int, date:Date): Reservation
+    +annulerReservation(reservationId:int): void
+  }
+
+  class PaiementModele {
+    +traiterPaiement(p:Paiement): bool
+    +rembourserPaiement(id:int): void
+  }
+
+  abstract class Client {
+    +id : int
+    +nom : String
+    +prenom : String
+    +email : String
+    +tel : int
+    +age : int
+    +typeAge : enum {enfant, senior, regulier}
+
+    +naviguerAttractions() : void
+    +reserverAttraction(date: Date, attraction: Attraction) : Reservation
+    +calculerReduction() : float
+    +consulterFacture() : void
+  }
+
+  class ClientInvite {
+    +reserverSansConnexion() : Reservation
+  }
+
+  class ClientNouveau {
+    +sInscrire(id: String, mdp: String) : void
+  }
+
+  class ClientAncien {
+    +loginMembre(id: String, mdp: String) : bool
+    +consulterHistorique() : void
+  }
+
+  Client <|-- ClientInvite
+  Client <|-- ClientNouveau
+  Client <|-- ClientAncien
+
+  class Admin {
+    +id : int
+    +nom : String
+    +email : String
+    +gererAttractions() : void
+    +gererReductions() : void
+    +gererUtilisateurs() : void
+    +identifierAttractionsPopulaires() : List<Attraction>
+  }
+
+  class Attraction {
+    +id : int
+    +nom : String
+    +type : String
+    +capacite : int
+    +duree : Time
+    +prix : float
+    +statut : enum {active, inactive}
+
+    +afficherDetails() : void
+    +mettreAJour() : void
+  }
+
+  class Reservation {
+    +id : int
+    +date : Date
+    +statut : enum {en_attente, confirmee, annulee}
+
+    +confirmer() : void
+    +annuler() : void
+  }
+
+  class Billet {
+    +id : int
+    +statut : enum {valide, utilise, expire}
+
+    +genererQR() : String
+    +valider() : void
+  }
+
+  class Paiement {
+    +id : int
+    +montant : float
+    +date_paiement : Date
+    +statut : enum {en_attente, effectue, refuse}
+
+    +payer() : bool
+    +rembourser() : void
+  }
+
+  class Reduction {
+    +id : int
+    +pourcentage : float
+    +raison : String
+
+    +appliquer(montant: float) : float
+  }
+
+  class Historique {
+    +id : int
+    +date_visite : Date
+    +afficher() : void
+  }
+
+  ' === Associations entre les modèles et les entités métier ===
+  AttractionModele --> Attraction
+  ClientModele --> Client
+  ReservationModele --> Reservation
+  ReservationModele --> Client
+  ReservationModele --> Attraction
+  ReservationModele --> Reduction
+  PaiementModele --> Paiement
+
+  ' Associations avec DAO
+  AttractionModele --> AttractionDAO
+  ClientModele --> ClientDAO
+  ReservationModele --> ReservationDAO
+  PaiementModele --> PaiementDAO
+}
+
+' === Associations principales ===
+Client --> "0..*" Reservation : fait >
+ClientAncien --> "0..*" Historique : possède >
+Reservation --> "1" Billet : génère >
+Reservation --> "1" Paiement : implique >
+Reservation --> "1" Attraction : concerne >
+Reservation --> "0..1" Reduction : utilise >
+
+Admin --> Attraction : gère >
+Admin --> Reduction : configure >
+Admin --> Client : supervise >
+
+' === Liens MVC ===
+AttractionView --> RechercheController
+ClientView --> MiseAJourController
+ReservationView --> RechercheController
+PaiementView --> MiseAJourController
+AdminView --> ReportingController
+
+RechercheController --> AttractionModele
+MiseAJourController --> ClientModele
+MiseAJourController --> PaiementModele
+ReportingController --> ReservationModele
+
+@enduml
